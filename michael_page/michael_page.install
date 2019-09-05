@@ -1,0 +1,143 @@
+<?php
+/**
+ * @file
+ * Install and uninstall functions for the michael_page module.
+ */
+
+/**
+* Implements of hook_enable()
+**/
+function michael_page_enable(){
+  $t = get_t();
+  $salary_type = array(
+    'name' => 'Salary Type',
+    'machine_name' => 'salary_type',
+    'description' => t('Types of salary'),
+    'module' => 'taxonomy',
+    'hierarchy' => 0,
+  );
+  taxonomy_vocabulary_save((object) $salary_type);
+  $employed = array(
+    'type'=>'employed',
+    'name'=>$t('Employed'),
+    'description'=>$t('Create a new Employed'),
+    'title_label'=>$t('Employed'),
+    'base'=>'node_content',
+    'custom'=>TRUE,
+  );
+  $node_type = node_type_set_defaults($employed);
+  node_type_save($node_type);
+  $fields = array(
+   'employ_name' => array(
+     'field_name' => 'employ_name',		
+     'required' => TRUE,
+     'type' => 'text',
+   ),
+   'remote_id' => array(
+     'field_name' => 'remote_id',	    
+     'required' => TRUE,
+     'type' => 'number_integer',		
+   ),
+   'age' => array(
+     'field_name' => 'age',	    
+     'required' => TRUE,
+     'type' => 'number_integer',		
+   ),
+   'salary_type' => array(
+     'field_name' => 'salary_type',
+     'type' => 'taxonomy_term_reference',
+     'cardinality' => -1,
+     'settings' => arraY(
+       'allowed_values' => array(
+         array(
+           'vocabulary' => 'salary_type',
+           'parent' => 0,
+         ),
+       ),
+     ),
+   ), 
+ );
+  foreach($fields as $field) {	  
+    field_create_field($field);
+  }
+  $instances = array(
+    'employ_name' => array(
+      'field_name' => 'employ_name',
+      'label' => $t('Name'),
+      'entity_type' => 'node',
+      'bundle' => 'employed',
+      'required' => TRUE,
+      'widget' =>array(
+       'type' => 'textfield'
+     ),
+    ),
+    'remote_id' => array(
+      'field_name' => 'remote_id',
+      'label' => $t('Remote ID'),
+      'entity_type' => 'node',
+      'bundle' => 'employed',
+      'required' => TRUE,
+      'widget' =>array(
+       'type' => 'textfield'
+     ),
+    ),
+    'age' => array(
+      'field_name' => 'age',
+      'label' => $t('Age'),
+      'entity_type' => 'node',
+      'bundle' => 'employed',
+      'required' => TRUE,
+      'widget' =>array(
+       'type' => 'textfield'
+     ),
+    ),
+    'salary_type' => array(
+      'field_name' => 'salary_type',
+      'label' => $t('Salary Type'),		
+      'entity_type' => 'node',
+      'bundle' => 'employed',			
+      'description'=> t('Salary Type'),
+      'required' => true,
+      'widget' => array(
+       'type' => 'option_select',
+     ),
+    ),
+  );
+
+  foreach($instances as $instance) {
+    $instance['entity_field'] = 'node';
+    $instance['bundle'] = 'employed';
+    field_create_instance($instance);
+  }
+
+  $salary_types =array("Salario bajo","Salario medio","Salario alto");
+  $vocabulary = taxonomy_vocabulary_machine_name_load("salary_type");
+  $vid = $vocabulary->vid;
+  foreach ($salary_types as $salary_type) {
+    $term = new stdClass();   
+    $term->vid = $vid;
+    $term->name = $salary_type ;      
+    taxonomy_term_save($term);
+  }
+}
+
+/**
+* Implements of hook_disable()
+**/
+function michael_page_disable(){
+  $query = 'SELECT nid ';
+  $query .= 'FROM {node} ';
+  $query .= 'WHERE {node}.type = :type ';	
+  $result = db_query( $query, array(':type'	=> 'employed') );
+  $nids = array();
+  foreach( $result as $row ) {
+    $nids[] = $row->nid;
+  }
+  node_delete_multiple( $nids );	
+  foreach( field_info_instances('node', 'employed') as $field_name	=> $instance ) {
+    field_delete_instance($instance);
+  }
+  node_type_delete('employed'); 
+  $salary_types = taxonomy_vocabulary_machine_name_load('salary_type');
+  taxonomy_vocabulary_delete($salary_types->vid);
+}

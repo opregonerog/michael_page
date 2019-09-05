@@ -1,0 +1,7 @@
+name = michael_page
+description = Module that implments the Employee API
+package = michaelpage
+core = 7.x
+configure = admin/config/system/michael_page
+dependencies[] = views
+
